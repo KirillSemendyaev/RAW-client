@@ -10,6 +10,22 @@
 #include <net/ethernet.h>
 #include <net/if.h>
 
+__u16 checksum(__u16 *buf, __u32 size)
+{
+	if ((buf == NULL) || (size < 1)) {
+		printf("buf: %p, size: %d\n", buf, size);
+		return 0;
+	}
+	__u32 sum = 0;
+
+	for (int i = 0; i < (size / 2); ++i) {
+		sum += buf[i];
+	}
+	sum += (sum >> 16) + (sum & 0xffff);
+
+	return sum ^ 0xffff;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -68,12 +84,12 @@ int main(int argc, char **argv)
 	iph.tos = 0;
 	iph.tot_len = htons(len - sizeof(ethh));
 	iph.id = htons(8008);
-	iph.frag_off = 0;
+	iph.frag_off = 0x40;
 	iph.ttl = 255;
 	iph.protocol = IPPROTO_UDP;
 	iph.saddr = inet_addr(argv[3]);
 	iph.daddr = inet_addr(argv[1]);
-	iph.check = 0;
+	iph.check = htons(checksum((__u16 *)&iph, sizeof(iph)));
 
 	memcpy(buf, &ethh, sizeof(ethh));
 	memcpy(buf + sizeof(ethh), &iph, sizeof(iph));
