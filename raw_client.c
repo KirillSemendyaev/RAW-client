@@ -12,18 +12,19 @@
 
 __u16 checksum(__u16 *buf, __u32 size)
 {
+	printf("buf: %p, size: %d\n", buf, size);
 	if ((buf == NULL) || (size < 1)) {
-		printf("buf: %p, size: %d\n", buf, size);
 		return 0;
 	}
-	__u32 sum = 0;
+	__u32 sum = 0, ret;
 
 	for (int i = 0; i < (size / 2); ++i) {
+		printf("buf[%d]: %x, sum: %x\n", i, buf[i],  sum);
 		sum += buf[i];
 	}
-	sum += (sum >> 16) + (sum & 0xffff);
-
-	return sum ^ 0xffff;
+	printf("sum >> 16 = %x, sum & 0xffff = %x\n", sum >> 16, sum & 0xffff);
+	ret = (sum >> 16) + (sum & 0xffff);
+	return ~ret;
 }
 
 
@@ -54,7 +55,7 @@ int main(int argc, char **argv)
 	memset(&iph, 0, sizeof(iph));
 	memset(&udph, 0, sizeof(udph));
 	target.sll_family = AF_PACKET;
-	target.sll_ifindex = if_nametoindex("enp2s0");
+	target.sll_ifindex = if_nametoindex("wlp1s0");
 	target.sll_halen = 6;
 	target_size = sizeof(target);
 	len = sizeof(buf);
@@ -65,12 +66,18 @@ int main(int argc, char **argv)
 	ethh.h_dest[3] = 0xf4;
 	ethh.h_dest[4] = 0x72;
 	ethh.h_dest[5] = 0xb1;
-	ethh.h_source[0] = 0xe8;
+	ethh.h_source[0] = 0xb8;
+	ethh.h_source[1] = 0x03;
+	ethh.h_source[2] = 0x05;
+	ethh.h_source[3] = 0xab;
+	ethh.h_source[4] = 0x70;
+	ethh.h_source[5] = 0xc5;
+	/*ethh.h_source[0] = 0xe8;
 	ethh.h_source[1] = 0x03;
 	ethh.h_source[2] = 0x9a;
 	ethh.h_source[3] = 0xb6;
 	ethh.h_source[4] = 0xf2;
-	ethh.h_source[5] = 0xde;
+	ethh.h_source[5] = 0xde;*/
 	ethh.h_proto = htons(ETH_P_IP);
 
 
@@ -89,7 +96,7 @@ int main(int argc, char **argv)
 	iph.protocol = IPPROTO_UDP;
 	iph.saddr = inet_addr(argv[3]);
 	iph.daddr = inet_addr(argv[1]);
-	iph.check = htons(checksum((__u16 *)&iph, sizeof(iph)));
+	iph.check = checksum((__u16 *)&iph, sizeof(iph));
 
 	memcpy(buf, &ethh, sizeof(ethh));
 	memcpy(buf + sizeof(ethh), &iph, sizeof(iph));
